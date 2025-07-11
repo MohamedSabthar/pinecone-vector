@@ -126,7 +126,7 @@ public isolated function getDocumentContent(map<anydata>? metadata) returns stri
         return "No metadata provided";
     }
 
-    anydata documentContent = metadata["document"];
+    anydata documentContent = metadata["content"];
     if documentContent is string {
         return documentContent;
     } else if documentContent is () {

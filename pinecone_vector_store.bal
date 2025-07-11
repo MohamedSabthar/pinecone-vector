@@ -16,8 +16,8 @@
 
 import ballerina/ai;
 import ballerina/log;
-import ballerinax/pinecone.vector;
 import ballerina/uuid;
+import ballerinax/pinecone.vector;
 
 # Pinecone Vector Store implementation with support for Dense, Sparse, and Hybrid vector search modes.
 #
@@ -72,8 +72,8 @@ public isolated class VectorStore {
 
         vector:Vector[] vectors = [];
         foreach ai:VectorEntry entry in entries {
-            map<anydata> metadata = entry.document?.metadata ?: {};
-            metadata["document"] = entry.document.content;
+            map<anydata> metadata = entry.chunk?.metadata ?: {};
+            metadata["content"] = entry.chunk.content;
             ai:Embedding embedding = entry.embedding;
 
             vector:Vector vec;
@@ -188,12 +188,28 @@ public isolated class VectorStore {
         return from vector:QueryMatch item in matches
             select {
                 similarityScore: item?.score ?: 0.0,
-                document: {
+                chunk: <ai:TextChunk>{
                     content: getDocumentContent(item?.metadata),
-                    metadata: item.metadata
+                    metadata: self.createMetadata(item?.metadata)
                 },
                 embedding: item?.values ?: []
             };
+    }
+
+    private isolated function createMetadata(vector:VectorMetadata? metadata) returns ai:Metadata? {
+        if metadata is () {
+            return;
+        }
+        ai:Metadata chunkMetadata = {};
+        foreach string key in metadata.keys() {
+            anydata value = metadata[key];
+            if value is json {
+                chunkMetadata[key] = value;
+            } else {
+                chunkMetadata[key] = value.toJson();
+            }
+        }
+        return chunkMetadata;
     }
 
     # Deletes vector entries from the store by their reference document ID.
